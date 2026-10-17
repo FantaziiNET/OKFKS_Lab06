@@ -1,0 +1,88 @@
+services:
+  apigateway:
+    container_name: "apigateway"
+    image: ${DOCKER_REGISTRY-}apigateway
+    build:
+      context: .
+      dockerfile: ApiGateway/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    ports:
+      - "5000:8080"  
+    depends_on:
+      - productservice
+      - orderservice
+    links:
+      - productservice
+      - orderservice
+    networks:
+      - net
+
+  productservice:
+    container_name: "productservice"
+    image: ${DOCKER_REGISTRY-}productservice
+    build:
+      context: .
+      dockerfile: ProductService/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - CONNECTION_STRING=Server=productdb;Database=Products;User=root;Password=root;Port=3306 
+    depends_on:
+      - productdb 
+    links:
+      - productdb
+    networks:
+      - net
+
+  productdb:
+    container_name: "productdb"
+    image: mysql:8.1
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: Products
+    volumes:
+      - productdb:/var/lib/mysql
+      - ./products_init.sql:/docker-entrypoint-initdb.d/products_init.sql:ro
+    ports:
+      - "3306:3306"  
+    networks:
+      - net
+
+  orderservice:
+    container_name: "orderservice"
+    image: ${DOCKER_REGISTRY-}orderservice
+    build:
+      context: .
+      dockerfile: OrderService/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - CONNECTION_STRING=Server=orderdb;Database=Orders;User=root;Password=root;Port=3306 
+    depends_on:
+      - orderdb 
+    links:
+      - orderdb
+    networks:
+      - net
+
+  orderdb:
+    container_name: "orderdb"
+    image: mysql:8.1
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: Orders
+    volumes:
+      - orderdb:/var/lib/mysql
+      - ./orders_init.sql:/docker-entrypoint-initdb.d/orders_init.sql:ro
+    ports:
+      - "3306:3306"  
+    networks:
+      - net
+
+volumes:
+  productdb:
+  orderdb:
+
+networks:
+  net:
